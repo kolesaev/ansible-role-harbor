@@ -1,0 +1,40 @@
+---
+# defaults file for Harbor
+
+# What version would you like to install?
+harbor_version: "2.10.0"
+
+# What type of installation would you like, either "online" or "offline".
+harbor_installation_type: online
+
+# Specify the IP address or the fully qualified domain name (FQDN) of the target host on which to deploy Harbor.
+harbor_hostname: "{{ ansible_hostname }}"
+
+# Set an initial password for the Harbor system administrator.
+harbor_admin_password: "Harbor12345"
+
+# Where to create Harbor directory
+harbor_parent_dir: /home
+
+# Where to store data
+harbor_data_dir: "{{ harbor_parent_dir }}/harbor/data"
+
+# Use https
+# TODO: deprecation notice
+harbor_use_https: true
+
+# Http port
+harbor_http_port: 80
+
+# Https port
+harbor_https_port: 443
+
+# Install with trivy or not
+harbor_enable_trivy: false
+
+# Fill harbor_external_url if you want to enable external proxy.
+# Use either harbor_hostname or harbor_external_url
+harbor_external_url: ""
+
+# We are able to define an interface IP for open port when we enable external proxy
+harbor_iface_ip: ""

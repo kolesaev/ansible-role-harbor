@@ -1,0 +1,56 @@
+---
+
+- name: Read harbor.yml.tmpl
+  ansible.builtin.slurp:
+    src: "{{ harbor_parent_dir }}/harbor/harbor.yml.tmpl"
+  register: harbor_yml
+
+- name: Read harbor.yml.tmpl to dictionary
+  ansible.builtin.set_fact:
+    harbor_yml: "{{ harbor_yml['content'] | b64decode | from_yaml }}"
+
+- name: Set vars for harbor.yml
+  ansible.builtin.set_fact:
+    harbor_yml: "{{ harbor_yml | combine(newdata, recursive=True) }}"
+  vars: 
+    newdata:
+      _version: "{{ harbor_version }}"
+      hostname: "{{ harbor_hostname }}"
+      harbor_admin_password: "{{ harbor_admin_password }}"
+      data_volume: "{{ harbor_data_dir }}"
+      http:
+        port: "{{ harbor_http_port }}"
+
+- name: Enable https
+  ansible.builtin.set_fact:
+    harbor_yml: "{{ harbor_yml | combine(newdata, recursive=True) }}"
+  vars: 
+    newdata:
+      https:
+        port: "{{ harbor_https_port }}"
+        certificate: "{{ harbor_parent_dir }}/harbor/tls/certificate.pem"
+        private_key: "{{ harbor_parent_dir }}/harbor/tls/certificate.key"
+  when:
+    - harbor_use_https
+
+- name: Disable https
+  ansible.builtin.set_fact:
+    harbor_yml: |
+      {% set a = harbor_yml.pop('https') %}
+      {{ harbor_yml }}
+  when:
+    - not harbor_use_https
+
+- name: Set external_url
+  ansible.builtin.set_fact:
+    harbor_yml: "{{ harbor_yml | combine(newdata, recursive=True) }}"
+  vars: 
+    newdata:
+      external_url: "{{ harbor_external_url }}"
+  when:
+    - harbor_external_url
+
+- name: Write harbor.yml
+  ansible.builtin.copy:
+    content: '{{ harbor_yml | to_nice_yaml(indent=2) }}'
+    dest: "{{ harbor_parent_dir }}/harbor/harbor.yml"

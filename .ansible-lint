@@ -1,0 +1,12 @@
+---
+#
+# Ansible managed
+#
+exclude_paths:
+  - requirements.yml
+
+skip_list:
+  - yaml[truthy]
+
+enable_list:
+  - name[prefix]
