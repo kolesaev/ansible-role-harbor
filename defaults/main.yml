@@ -4,6 +4,9 @@
 # What version would you like to install?
 harbor_version: "2.10.0"
 
+# Should we force install Harbor even if installed
+harbor_force_install: false
+
 # What type of installation would you like, either "online" or "offline".
 harbor_installation_type: online
 

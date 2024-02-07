@@ -14,7 +14,7 @@
   ansible.builtin.set_fact:
     docker_compose_yml: "{{ docker_compose_yml['content'] | b64decode | from_yaml }}"
 
-- name: Open only localhost with http port
+- name: Open only one IP with http port
   ansible.builtin.set_fact:
     docker_compose_yml: "{{ docker_compose_yml | combine(newdata, recursive=True) }}"
   vars: 
@@ -26,7 +26,7 @@
   when:
     - not harbor_use_https
 
-- name: Open only localhost with https port
+- name: Open only one IP with https port
   ansible.builtin.set_fact:
     docker_compose_yml: "{{ docker_compose_yml | combine(newdata, recursive=True) }}"
   vars: 

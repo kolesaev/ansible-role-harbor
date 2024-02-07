@@ -46,6 +46,9 @@ The default values for the variables are set in [`defaults/main.yml`](https://gi
 # What version would you like to install?
 harbor_version: "2.10.0"
 
+# Should we force install Harbor even if installed
+harbor_force_install: false
+
 # What type of installation would you like, either "online" or "offline".
 harbor_installation_type: online
 
@@ -82,6 +85,10 @@ harbor_external_url: ""
 harbor_iface_ip: ""
 ```
 
+## [Reinstall](#reinstall)
+
+This role will create an indicator file not to allow Harbor be installed again. You are able to delete this file (*installed-indicator* file in harbor directory) or set *true* as a value for *harbor_force_install* variable
+
 ## [Requirements](#requirements)
 
 ### [Remote OS Packages](#remote-os-packages)
@@ -106,3 +113,12 @@ ansible-galaxy collection install community.crypto
 ```
 ansible-galaxy collection install community.docker
 ```
+
+## [Not implemented](#not-implemented)
+
+- ability to use an external database
+- ability to use an external redis
+- ability to use an external syslog server
+- ability to use tracing
+- ability to open metrics endpoint
+- (and other things which are not configurable via default variables)

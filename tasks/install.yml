@@ -1,0 +1,62 @@
+
+
+- name: Create harbor parent directory
+  ansible.builtin.file:
+    path: "{{ harbor_parent_dir }}"
+    state: directory
+    recurse: yes
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+  when: 
+    - not harbor_parent_dir_check.stat.exists
+
+- name: Unarchive harbor
+  ansible.builtin.unarchive:
+    src: "{{ harbor_archive }}"
+    dest: "{{ harbor_parent_dir }}"
+    remote_src: yes
+
+- name: Prepare TLS certs
+  ansible.builtin.import_tasks:
+    file: tls.yml
+  run_once: true
+  when:
+    - harbor_use_https
+
+- name: Update harbor.yml
+  ansible.builtin.import_tasks:
+    file: update-config.yml
+  run_once: true
+
+- name: Enable trivy
+  ansible.builtin.set_fact:
+    harbor_install_command: "{{ harbor_install_command }} --with-trivy"
+  when:
+    - harbor_enable_trivy
+
+- name: Run installer
+  ansible.builtin.command:
+    cmd: "{{ harbor_install_command }}"
+    chdir: "{{ harbor_parent_dir }}/harbor"
+  changed_when: yes
+  register: result
+  until:
+    - result is not failed
+  retries: 2
+  delay: 10
+  when:
+    - ansible_connection not in [ "container", "docker", "community.docker.docker" ]
+
+- name: Update open ports in docker-compose.yml
+  ansible.builtin.import_tasks:
+    file: update-compose.yml
+  run_once: true
+  when:
+    - harbor_iface_ip
+    - harbor_external_url
+
+- name: Put installed indicator
+  copy:
+    content: ""
+    dest: "{{ harbor_parent_dir }}/harbor/installed-indicator"
+    force: true
