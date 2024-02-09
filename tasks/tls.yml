@@ -1,6 +1,5 @@
 ---
-
-- name: Create TLS certs directory
+- name: TLS | Creating TLS Directory
   ansible.builtin.file:
     path: "{{ harbor_parent_dir }}/harbor/tls"
     state: directory
@@ -8,11 +7,11 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
 
-- name: Create private key (RSA, 4096 bits)
+- name: TLS | Creating Private Key
   community.crypto.openssl_privatekey:
     path: "{{ harbor_parent_dir }}/harbor/tls/certificate.key"
 
-- name: Create simple self-signed certificate
+- name: TLS | Creating Self-Signed Certificate
   community.crypto.x509_certificate:
     path: "{{ harbor_parent_dir }}/harbor/tls/certificate.pem"
     privatekey_path: "{{ harbor_parent_dir }}/harbor/tls/certificate.key"

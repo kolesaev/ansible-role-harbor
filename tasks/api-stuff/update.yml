@@ -1,0 +1,293 @@
+---
+- name: API | Updating System Configuration
+  vars:
+    restriction: "{{ 'adminonly' if harbor_project_creation_restriction else 'everyone' }}"
+  ansible.builtin.uri:
+    url: "https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/configurations"
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: PUT
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 200
+    body: '{"project_creation_restriction":"{{ restriction }}"}'
+  register: _result
+  retries: 2
+  delay: 10
+  until: _result.status == 200
+  when: restriction
+
+- name: API | Updating Garbage Collector
+  ansible.builtin.uri:
+    url: "https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/system/gc/schedule"
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: PUT
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 200
+    body: "{{ lookup('template', 'templates/api-templates/gc.j2') }}"
+  register: _result
+  retries: 2
+  delay: 10
+  until: _result.status == 200
+
+- name: API | Updating Users
+  no_log: true # hiding log to prevent passwords be showed
+  vars:
+    user_id_query: "[?username==`{{ item.name }}`].user_id"
+    user_id: "{{ users_result.json | json_query(user_id_query) | first }}"
+  ansible.builtin.uri:
+    url: >-
+      https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/users{{
+        ('/' ~ user_id) if users_result.json | json_query(user_id_query) | default(null)
+      }}
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: "{{ 'PUT' if users_result.json | json_query(user_id_query) | default(null) else 'POST' }}"
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 200
+      - 201
+    body: "{{ lookup('template', 'templates/api-templates/users.j2') }}"
+  register: _result
+  retries: 2
+  delay: 10
+  until: (_result.status == 200) or (_result.status == 201)
+  when: harbor_users is defined
+  with_items: "{{ harbor_users }}"
+
+- name: API | Updating Mirror Registries
+  vars:
+    registry_url: "{{ item.url }}"
+    registry_name: "{{ item.name }}"
+    registry_type: "{{ item.type }}"
+    registry_access_key: "{{ item.access_key if item.access_key is defined | default('') }}"
+    registry_access_secret: "{{ item.access_secret if item.access_secret is defined | default('') }}"
+    registry_auth_type: "{{ item.auth_type if item.auth_type is defined | default('basic') }}"
+    registry_insecure: "{{ item.insecure if item.insecure is defined | default('false') }}"
+    registry_id_query: "[?name==`{{ item.name }}`].id"
+    registry_id: "{{ registries_result.json | json_query(registry_id_query) | first }}"
+  ansible.builtin.uri:
+    url: >- 
+      https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/registries{{
+        ('/' ~ registry_id) if registries_result.json | json_query(registry_id_query) | default(null)
+      }}
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: "{{ 'PUT' if registries_result.json | json_query(registry_id_query) | default(null) else 'POST' }}"
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 200
+      - 201
+      - 409
+    body: "{{ lookup('template', 'templates/api-templates/registries.j2') }}"
+  register: _result
+  retries: 2
+  delay: 10
+  until: (_result.status == 200) or (_result.status == 201) or (_result.status == 409)
+  when: harbor_registries is defined
+  with_items: "{{ harbor_registries }}"
+
+- name: API | Updating Hosted Projects
+  vars:
+    project_id_query: "[?name==`{{ item.name }}`].project_id"
+    project_id: "{{ projects_result.json | json_query(project_id_query) | first }}"
+  ansible.builtin.uri:
+    url: >-
+      https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/projects{{
+        ('/' ~ project_id) if projects_result.json | json_query(project_id_query) | default(null)
+      }}
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: "{{ 'PUT' if projects_result.json | json_query(project_id_query) | default(null) else 'POST' }}"
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 200
+      - 201
+      - 409
+    body: "{{ lookup('template', 'templates/api-templates/projects.j2') }}"
+  register: _result
+  retries: 2
+  delay: 10
+  until: (_result.status == 200) or (_result.status == 201) or (_result.status == 409)
+  when: 
+    - harbor_projects is defined
+    - item.proxy_registry is not defined
+  with_items: "{{ harbor_projects }}"
+
+- name: API | Updating Registry List
+  ansible.builtin.uri:
+    url: "https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/registries"
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: GET
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 200
+  register: registries_result
+  retries: 2
+  delay: 10
+  until: registries_result.status == 200
+
+- name: API | Updating Proxy Projects
+  vars:
+    project_id_query: "[?name==`{{ item.name }}`].project_id"
+    project_id: "{{ projects_result.json | json_query(project_id_query) | first }}"
+    registry_id_query: "[?name==`{{ item.proxy_registry }}`].id"
+    registry_id_result: "{{ registries_result.json | json_query(registry_id_query) }}"
+    registry_id: "{{ (registry_id_result | first) if registry_id_result | length > 0 }}"
+  ansible.builtin.uri:
+    url: >-
+      https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/projects{{
+        ('/' ~ project_id) if projects_result.json | json_query(project_id_query) | default(null)
+      }}
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: "{{ 'PUT' if projects_result.json | json_query(project_id_query) | default(null) else 'POST' }}"
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 200
+      - 201
+      - 409
+    body: "{{ lookup('template', 'templates/api-templates/projects.j2') }}"
+  register: _result
+  retries: 2
+  delay: 10
+  until: (_result.status == 200) or (_result.status == 201) or (_result.status == 409)
+  when: 
+    - harbor_projects is defined
+    - item.proxy_registry is defined
+    - registry_id
+  with_items: "{{ harbor_projects }}"
+
+- name: API | Creating Members
+  ansible.builtin.uri:
+    url: "https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/projects/{{ item.project }}/members"
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: POST
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 201
+      - 409
+    body: "{{ lookup('template', 'templates/api-templates/members.j2') }}"
+  register: _result
+  retries: 2
+  delay: 10
+  until: (_result.status == 201) or (_result.status == 409)
+  when: harbor_members is defined
+  with_items: "{{ harbor_members }}"
+
+- name: API | Setting Retention Enum Types
+  set_fact:
+    rule_types:
+      pushed_by_count: "latestPushedK"
+      pulled_by_count: "latestPulledN"
+      pushed_by_days:  "nDaysSinceLastPush"
+      pulled_by_days:  "nDaysSinceLastPull"
+      always:          "always"
+    repositories_mask_types:
+      matching: "repoMatches"
+      excluding: "repoExcludes"
+    tags_mask_types:
+      matching: "matches"
+      excluding: "excludes"
+
+- name: API | Getting Project List
+  ansible.builtin.uri:
+    url: "https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/projects"
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: GET
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 200
+  register: projects_result
+  retries: 2
+  delay: 10
+  until: projects_result.status == 200
+
+- name: API | Setting Retention Rules
+  vars:
+    project_id_query: "[?name==`{{ item.name }}`].project_id"
+    project_id: "{{ projects_result.json | json_query(project_id_query) | first }}"
+    retention_id_query: "[?name==`{{ item.name }}`].metadata.retention_id"
+    retention_id: "{{ projects_result.json | json_query(retention_id_query) | first }}"
+    rules: "{{ item.retention_policy.rules }}"
+    schedule: >-
+      {{ 
+        item.retention_policy.schedule if item.retention_policy.schedule != 'Daily' and item.retention_policy.schedule != 'Hourly'
+        else '0 0 0 * * *' if item.retention_policy.schedule == 'Daily'
+        else '0 0 * * * *' if item.retention_policy.schedule == 'Hourly'
+      }}
+  ansible.builtin.uri:
+    url: >-
+      https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/retentions{{ 
+        ('/' ~ retention_id) if projects_result.json | json_query(retention_id_query) | default(null) 
+      }}
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: "{{ 'PUT' if projects_result.json | json_query(retention_id_query) | default(null) else 'POST' }}"
+    user: "admin"
+    body_format: json
+    body: "{{ lookup('template', 'templates/api-templates/retentions.j2') }}"
+    password: "{{ harbor_admin_password }}"
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 200
+      - 201
+      - 409
+  register: _result
+  retries: 2
+  delay: 10
+  until: (_result.status == 200) or (_result.status == 201) or (_result.status == 409)
+  when:
+    - projects_result.json | json_query(project_id_query) | default(null)
+    - item.retention_policy is defined
+  with_items: "{{ harbor_projects }}"

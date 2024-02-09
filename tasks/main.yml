@@ -1,18 +1,17 @@
 ---
-# tasks file for harbor
+- name: Ensure Hostname Matches
+  ansible.builtin.hostname:
+    name: "{{ ansible_host }}"
 
-- name: Import assert.yml
-  ansible.builtin.import_tasks:
-    file: assert.yml
-  run_once: true
-  delegate_to: localhost
+- name: Ensure unattended-upgrades in required state
+  ansible.builtin.systemd_service:
+    name: unattended-upgrades
+    enabled: false
+    state: stopped
+    force: true
+  when: system_disable_unattended_upgrades
 
-- name: Check if harbor parent directory exists
-  stat:
-    path: "{{ harbor_parent_dir }}"
-  register: harbor_parent_dir_check
-
-- name: Check if harbor is installed already
+- name: Is Harbor Installed
   stat:
     path: "{{ harbor_parent_dir }}/harbor/installed-indicator"
   register: harbor_installed_check
@@ -31,3 +30,16 @@
   run_once: true
   when:
     - harbor_force_install
+
+- name: Ensuring Compose is Running
+  community.docker.docker_compose_v2:
+    project_src: "{{ harbor_parent_dir }}/harbor"
+    state: present
+  when:
+    - harbor_installed_check.stat.exists
+    - not harbor_force_install
+
+- name: Implement API Stuff
+  ansible.builtin.import_tasks:
+    file: api-stuff.yml
+  run_once: true

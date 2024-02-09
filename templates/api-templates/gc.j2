@@ -1,0 +1,11 @@
+{
+  "schedule": {
+    "type": "{{ harbor_gc.type | default('Custom') }}",
+    "cron": "{{ harbor_gc.schedule | default('0 0 0 * * *') }}"
+  },
+  "parameters": {
+    "delete_untagged": {{ 'true' if harbor_gc.delete_untagged | default(false) == true or harbor_gc.delete_untagged == 'true' else 'false' }},
+    "workers": {{ harbor_gc.workers | default(1) }}
+  }
+}
+

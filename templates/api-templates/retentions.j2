@@ -1,0 +1,43 @@
+{
+  "algorithm": "or",
+  {% if retention_id is defined %}"id": {{ retention_id }},{% endif %}
+  "rules": [
+    {% for rule in rules %}
+    {
+      "action": "retain",
+      {% if loop.index0 | bool or loop.last %}"disabled": false,{% endif %}
+      "scope_selectors": {
+        "repository": [
+          {
+            "kind": "doublestar",
+            "decoration": "{{ repositories_mask_types[rule.repositories_mask_type] }}",
+            "pattern": "{{ rule.repositories_mask }}"
+          }
+        ]
+      },
+      "tag_selectors": [
+        {
+          "decoration": "{{ tags_mask_types[rule.tags_mask_type] }}",
+          "extras": "{\"untagged\":true}",
+          "kind": "doublestar",
+          "pattern": "{{ rule.tags_mask }}"
+        }
+      ],
+      "params": {
+        "{{ rule_types[rule.rule_type] }}": {{ rule.rule_value | default(7) }}
+      },
+      "template": "{{ rule_types[rule.rule_type] }}"
+    },
+    {% endfor %}
+  ],
+  "scope": {
+    "level": "project",
+    "ref": {{ project_id }}
+  },
+  "trigger": {
+    "kind": "Schedule",
+    "settings": {
+      "cron": "{{ schedule | default('') }}"
+    }
+  }
+}

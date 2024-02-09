@@ -1,0 +1,54 @@
+---
+- name: API | Getting Projects
+  ansible.builtin.uri:
+    url: "https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/projects"
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: GET
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 200
+  register: projects_result
+  retries: 2
+  delay: 10
+  until: projects_result.status == 200
+
+- name: API | Getting Users
+  ansible.builtin.uri:
+    url: "https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/users"
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: GET
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 200
+  register: users_result
+  retries: 2
+  delay: 10
+  until: users_result.status == 200
+
+- name: API | Getting Registries
+  ansible.builtin.uri:
+    url: "https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/registries"
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: GET
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    force_basic_auth: yes
+    return_content: yes
+    status_code:
+      - 200
+  register: registries_result
+  retries: 2
+  delay: 10
+  until: registries_result.status == 200

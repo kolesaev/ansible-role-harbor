@@ -1,0 +1,8 @@
+{
+  "project_name": "{{ item.name }}",
+  {% if registry_id is defined and registry_id %}"registry_id": {{ registry_id }},{% endif %}
+  "metadata": {
+    "public": "{{ 'true' if item.public | default(false) == true or item.public == 'true' else 'false' }}",
+    "auto_scan": "{{ 'true' if (item.auto_scan | default(false) == true) or (item.auto_scan is defined and item.auto_scan == 'true') else 'false' }}"
+  }
+}

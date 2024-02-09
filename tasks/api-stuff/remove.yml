@@ -1,0 +1,106 @@
+---
+- name: API | Removing Members
+  vars:
+    project_exists_query: "[?name==`{{ item }}`].name"
+    project_name: "{{ projects_result.json | json_query(project_exists_query) | first }}"
+  ansible.builtin.uri:
+    url: "https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/projects/{{ project_name }}/{{ item.member_id }}"
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: DELETE
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    force_basic_auth: yes
+    return_content: no
+    status_code:
+      - 200
+  register: _result
+  retries: 2
+  delay: 10
+  until: _result.status == 200
+  when: 
+    - harbor_members_to_remove is defined
+    - projects_result.json | json_query(project_exists_query) | default(null)
+  with_items: "{{ harbor_members_to_remove }}"
+
+- name: API | Removing Projects
+  vars:
+    project_exists_query: "[?name==`{{ item }}`].name"
+    project_to_remove: "{{ projects_result.json | json_query(project_exists_query) | first }}"
+  ansible.builtin.uri:
+    url: "https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/projects/{{ project_to_remove }}"
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: DELETE
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    force_basic_auth: yes
+    return_content: no
+    status_code:
+      - 200
+      - 404
+  register: _result
+  retries: 2
+  delay: 10
+  until: (_result.status == 200) or (_result.status == 404)
+  when: 
+    - harbor_projects_to_remove is defined
+    - harbor_projects | selectattr ("name", "equalto", item) | list | length == 0
+    - projects_result.json | json_query(project_exists_query) | default(null)
+  with_items: "{{ harbor_projects_to_remove }}"
+
+- name: API | Removing Mirror Registries
+  vars:
+    registry_id_query: "[?name==`{{ item }}`].id"
+    registry_id: "{{ registries_result.json | json_query(registry_id_query) | first }}"
+  ansible.builtin.uri:
+    url: "https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/registries/{{ registry_id }}"
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: DELETE
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    force_basic_auth: yes
+    return_content: no
+    status_code:
+      - 200
+      - 404
+  register: _result
+  retries: 2
+  delay: 10
+  until: (_result.status == 200) or (_result.status == 404)
+  when: 
+    - harbor_registries_to_remove is defined
+    - harbor_registries | selectattr ("name", "equalto", item) | list | length == 0
+    - registries_result.json | json_query(registry_id_query) | default(null)
+  with_items: "{{ harbor_registries_to_remove }}"
+
+- name: API | Removing Users
+  vars:
+    user_id_query: "[?username==`{{ item }}`].user_id"
+    user_id: "{{ users_result.json | json_query(user_id_query) | first }}"
+  ansible.builtin.uri:
+    url: "https://{{ harbor_local_ip }}:{{ harbor_https_port }}/api/v2.0/users/{{ user_id }}"
+    headers:
+      Content-Type: application/json
+    validate_certs: no
+    method: DELETE
+    user: "admin"
+    password: "{{ harbor_admin_password }}"
+    force_basic_auth: yes
+    return_content: no
+    status_code:
+      - 200
+      - 404
+  register: _result
+  retries: 2
+  delay: 10
+  until: (_result.status == 200) or (_result.status == 404)
+  when: 
+    - harbor_users_to_remove is defined
+    - harbor_users | selectattr ("name", "equalto", item) | list | length == 0
+    - users_result.json | json_query(user_id_query) | default(null)
+  with_items: "{{ harbor_users_to_remove }}"

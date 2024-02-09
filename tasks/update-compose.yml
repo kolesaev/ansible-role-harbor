@@ -1,32 +1,19 @@
 ---
-
-- name: Stop docker compose
+- name: Compose | Stopping Compose
   community.docker.docker_compose_v2:
     project_src: "{{ harbor_parent_dir }}/harbor"
     state: absent
 
-- name: Read docker-compose.yml
+- name: Compose | Reading docker-compose.yml
   ansible.builtin.slurp:
     src: "{{ harbor_parent_dir }}/harbor/docker-compose.yml"
   register: docker_compose_yml
 
-- name: Read docker-compose.yml to dictionary
+- name: Compose | Converting To Dictionary
   ansible.builtin.set_fact:
     docker_compose_yml: "{{ docker_compose_yml['content'] | b64decode | from_yaml }}"
 
-- name: Open only one IP with http port
-  ansible.builtin.set_fact:
-    docker_compose_yml: "{{ docker_compose_yml | combine(newdata, recursive=True) }}"
-  vars: 
-    newdata:
-      services:
-        proxy:
-          ports:
-            - "{{ harbor_iface_ip }}:{{ harbor_http_port }}:8080"
-  when:
-    - not harbor_use_https
-
-- name: Open only one IP with https port
+- name: Compose | Openning Only For One IP
   ansible.builtin.set_fact:
     docker_compose_yml: "{{ docker_compose_yml | combine(newdata, recursive=True) }}"
   vars: 
@@ -35,15 +22,13 @@
         proxy:
           ports:
             - "{{ harbor_iface_ip }}:{{ harbor_https_port }}:8443"
-  when:
-    - harbor_use_https
 
-- name: Write docker-compose.yml
+- name: Compose | Writing docker-compose.yml
   ansible.builtin.copy:
     content: '{{ docker_compose_yml | to_nice_yaml(indent=2) }}'
     dest: "{{ harbor_parent_dir }}/harbor/docker-compose.yml"
 
-- name: Start docker compose
+- name:  Compose | Starting Compose
   community.docker.docker_compose_v2:
     project_src: "{{ harbor_parent_dir }}/harbor"
     state: present

@@ -1,0 +1,19 @@
+---
+- name: Setting Harbor Local IP
+  ansible.builtin.set_fact:
+    harbor_local_ip: "{{ harbor_iface_ip | default('127.0.0.1', true) }}"
+
+- name: Collect Existing Objects
+  ansible.builtin.import_tasks:
+    file: api-stuff/collect.yml
+  run_once: true  
+
+- name: Remove Objects
+  ansible.builtin.import_tasks:
+    file: api-stuff/remove.yml
+  run_once: true
+
+- name: Udpdate Ojects
+  ansible.builtin.import_tasks:
+    file: api-stuff/update.yml
+  run_once: true

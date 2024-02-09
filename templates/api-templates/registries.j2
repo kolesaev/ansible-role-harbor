@@ -1,0 +1,11 @@
+{
+  "credential": {
+    "access_key": "{{ registry_access_key }}",
+    "access_secret": "{{ registry_access_secret }}",
+    "type": "{{ registry_auth_type }}"
+  },
+  "name": "{{ registry_name }}",
+  "url": "{{ registry_url }}",
+  "type": "{{ registry_type }}",
+  "insecure": {{ 'true' if (registry_insecure | default(false) == true) or (registry_insecure is defined and registry_insecure == 'true') else 'false' }}
+}
