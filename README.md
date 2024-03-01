@@ -161,6 +161,7 @@ harbor_projects: []
   #         tags_mask: "dev-*"
   #         rule_type: "pushed_by_days"
   #         rule_value: 30
+  #         with_untagged: false
   ####################################################
   #####                                          #####
   ##### Mapping for retention rules              #####

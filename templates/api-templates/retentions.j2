@@ -18,7 +18,7 @@
       "tag_selectors": [
         {
           "decoration": "{{ tags_mask_types[rule.tags_mask_type] }}",
-          "extras": "{\"untagged\":true}",
+          "extras": "{\"untagged\": {{ 'true' if (rule.with_untagged | default(false) == true) else 'false' }}}",
           "kind": "doublestar",
           "pattern": "{{ rule.tags_mask }}"
         }
